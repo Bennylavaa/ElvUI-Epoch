@@ -361,6 +361,17 @@ function CH:StyleChat(frame)
 	editbox:SetTemplate(nil, true)
 	editbox:SetAltArrowKeyMode(CH.db.useAltKey)
 	editbox:SetAllPoints(LeftChatDataPanel)
+	-- Set proper strata/level for BELOW_CHAT position
+	if CH.db.editBoxPosition == "BELOW_CHAT" then
+		editbox:SetFrameStrata("DIALOG")
+		editbox:SetFrameLevel(10)
+	else
+		editbox:SetFrameStrata("HIGH")
+		editbox:SetFrameLevel(5)
+	end
+	-- Apply chat font settings to editbox (get font size from the chat frame)
+	local _, fontSize = frame:GetFont()
+	editbox:SetFont(LSM:Fetch("font", CH.db.font), fontSize or 12, CH.db.fontOutline)
 	editbox:Hide()
 
 	for _, text in ipairs(ElvCharacterDB.ChatEditHistory) do
@@ -444,7 +455,11 @@ end
 
 function CH:UpdateSettings()
 	for _, frameName in ipairs(CHAT_FRAMES) do
-		_G[frameName.."EditBox"]:SetAltArrowKeyMode(CH.db.useAltKey)
+		local editbox = _G[frameName.."EditBox"]
+		editbox:SetAltArrowKeyMode(CH.db.useAltKey)
+		-- Update editbox font to match chat settings (use ChatFrame1's font size)
+		local _, fontSize = ChatFrame1:GetFont()
+		editbox:SetFont(LSM:Fetch("font", CH.db.font), fontSize or 12, CH.db.fontOutline)
 	end
 end
 
@@ -585,9 +600,19 @@ function CH:UpdateAnchors()
 			frame:Point("BOTTOMRIGHT", ChatFrame1, "BOTTOMRIGHT", 7, -LeftChatTab:GetHeight() - 4)
 		elseif self.db.editBoxPosition == "BELOW_CHAT" then
 			frame:SetAllPoints(LeftChatDataPanel)
+			-- Extra raise for BELOW_CHAT to ensure visibility
+			frame:SetFrameStrata("DIALOG")
+			frame:SetFrameLevel(10)
 		else
 			frame:Point("BOTTOMLEFT", ChatFrame1, "TOPLEFT", -1, 3)
 			frame:Point("TOPRIGHT", ChatFrame1, "TOPRIGHT", 4, LeftChatTab:GetHeight() + 3)
+			frame:SetFrameStrata("HIGH")
+			frame:SetFrameLevel(5)
+		end
+		
+		-- Force raise if BELOW_CHAT
+		if self.db.editBoxPosition == "BELOW_CHAT" then
+			frame:Raise()
 		end
 	end
 
@@ -1279,6 +1304,12 @@ function CH:SetupChat()
 		else
 			frame:SetShadowColor(0, 0, 0, 1)
 		end
+		
+		-- Apply same font to editbox (use ChatFrame1's font size as the standard)
+		local editbox = _G[frameName.."EditBox"]
+		if editbox and id == 1 then  -- Only update for ChatFrame1's editbox
+			editbox:SetFont(LSM:Fetch("font", self.db.font), fontSize, self.db.fontOutline)
+		end
 
 		if self.db.maxLines ~= frame:GetMaxLines() then
 			frame:SetMaxLines(self.db.maxLines)
@@ -1497,6 +1528,15 @@ function CH:SetChatFont(dropDown, chatFrame, fontSize)
 		chatFrame:SetShadowColor(0, 0, 0, 1)
 	end
 	chatFrame:SetShadowOffset(E.mult, -E.mult)
+	
+	-- Also update all editboxes to match chat font (use ChatFrame1's size as standard)
+	local _, editBoxFontSize = ChatFrame1:GetFont()
+	for _, frameName in ipairs(CHAT_FRAMES) do
+		local editbox = _G[frameName.."EditBox"]
+		if editbox then
+			editbox:SetFont(LSM:Fetch("font", self.db.font), editBoxFontSize or fontSize or 12, self.db.fontOutline)
+		end
+	end
 end
 
 CH.SecureSlashCMD = {
@@ -1951,6 +1991,11 @@ function CH:Initialize()
 	self:UpdateFading()
 	self:UpdateAnchors()
 	self:Panels_ColorUpdate()
+	
+	-- Fix editbox visibility issue on login/reload
+	E:Delay(0.1, function()
+		CH:UpdateAnchors()
+	end)
 
 	self:SecureHook("ChatEdit_OnEnterPressed")
 	self:SecureHook("FCF_SetWindowAlpha")
@@ -1989,6 +2034,16 @@ function CH:Initialize()
 		--Increase inset on right side to make room for character count text
 		local insetLeft, insetRight, insetTop, insetBottom = editbox:GetTextInsets()
 		editbox:SetTextInsets(insetLeft, insetRight + 30, insetTop, insetBottom)
+		
+		-- Ensure editbox is always visible above other frames
+		if CH.db.editBoxPosition == "BELOW_CHAT" then
+			editbox:SetFrameStrata("DIALOG")
+			editbox:SetFrameLevel(10)
+			editbox:Raise()
+		else
+			editbox:SetFrameStrata("HIGH")
+			editbox:SetFrameLevel(5)
+		end
 
 		if chanName and (chatType == "CHANNEL") then
 			if chanName == 0 then
