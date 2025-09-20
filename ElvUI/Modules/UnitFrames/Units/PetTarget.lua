@@ -101,4 +101,6 @@ function UF:Update_PetTargetFrame(frame, db)
 	frame:UpdateAllElements("ForceUpdate")
 end
 
-tinsert(UF.unitstoload, "pettarget")
+if UF.unitstoload then
+	tinsert(UF.unitstoload, "pettarget")
+end

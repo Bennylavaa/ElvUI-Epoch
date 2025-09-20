@@ -194,7 +194,9 @@ function UF:Update_PlayerFrame(frame, db)
 	frame:UpdateAllElements("ForceUpdate")
 end
 
-tinsert(UF.unitstoload, "player")
+if UF.unitstoload then
+	tinsert(UF.unitstoload, "player")
+end
 
 local function UpdateClassBar()
 	local frame = _G.ElvUF_Player

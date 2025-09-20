@@ -244,4 +244,6 @@ function UF:Update_RaidFrames(frame, db)
 	frame:UpdateAllElements("ForceUpdate")
 end
 
-UF.headerstoload.raid = true
+if UF.headerstoload then
+	UF.headerstoload.raid = true
+end

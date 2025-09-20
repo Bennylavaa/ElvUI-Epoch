@@ -136,4 +136,6 @@ function UF:Update_FocusFrame(frame, db)
 	frame:UpdateAllElements("ForceUpdate")
 end
 
-tinsert(UF.unitstoload, "focus")
+if UF.unitstoload then
+	tinsert(UF.unitstoload, "focus")
+end

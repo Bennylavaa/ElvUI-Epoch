@@ -287,4 +287,6 @@ function UF:Update_PartyFrames(frame, db)
 	frame:UpdateAllElements("ForceUpdate")
 end
 
-UF.headerstoload.party = {nil, "ELVUI_UNITPET, ELVUI_UNITTARGET"}
+if UF.headerstoload then
+	UF.headerstoload.party = {nil, "ELVUI_UNITPET, ELVUI_UNITTARGET"}
+end

@@ -29,41 +29,71 @@ function NP:Update_HealthColor(frame)
 	else
 		local db = self.db.colors
 		local status = frame.ThreatStatus
-		if status then
-			if status == 3 then
-				if E.Role == "Tank" then
-					r, g, b = db.threat.goodColor.r, db.threat.goodColor.g, db.threat.goodColor.b
-					scale = NP.db.threat.goodScale
-				else
-					r, g, b = db.threat.badColor.r, db.threat.badColor.g, db.threat.badColor.b
-					scale = NP.db.threat.badScale
-				end
-			elseif status == 2 then
-				if E.Role == "Tank" then
-					r, g, b = db.threat.badTransition.r, db.threat.badTransition.g, db.threat.badTransition.b
-				else
-					r, g, b = db.threat.goodTransition.r, db.threat.goodTransition.g, db.threat.goodTransition.b
-				end
-				scale = 1
-			elseif status == 1 then
-				if E.Role == "Tank" then
-					r, g, b = db.threat.goodTransition.r, db.threat.goodTransition.g, db.threat.goodTransition.b
-				else
-					r, g, b = db.threat.badTransition.r, db.threat.badTransition.g, db.threat.badTransition.b
-				end
-				scale = 1
-			else
-				if E.Role == "Tank" then
-					r, g, b = db.threat.badColor.r, db.threat.badColor.g, db.threat.badColor.b
-					scale = self.db.threat.badScale
-				else
-					r, g, b = db.threat.goodColor.r, db.threat.goodColor.g, db.threat.goodColor.b
-					scale = self.db.threat.goodScale
+		local inCombat = status ~= nil -- If we have threat status, we're in combat
+		
+		-- Check if manual tank assignment or stance-based tank detection
+		local isTank = E.Role == "Tank" or (E.GetAssignedTankRole and E:GetAssignedTankRole("player"))
+		
+		-- Check if another tank has this mob (for off-tank coloring)
+		-- Only relevant when in a group and mob is alive
+		local otherTankHasAggro = false
+		local inGroup = GetNumPartyMembers() > 0 or GetNumRaidMembers() > 0
+		local mobHealth = frame.oldHealthBar and frame.oldHealthBar:GetValue() or 0
+		local mobIsAlive = mobHealth > 0 and (not UnitIsDead(frame.unit or ""))
+		
+		if inGroup and mobIsAlive and isTank and status and status < 3 then -- We're a tank but don't have aggro
+			-- Check if the mob's target is another assigned tank (not ourselves)
+			if frame.unit and UnitExists(frame.unit.."target") then
+				local targetName = UnitName(frame.unit.."target")
+				-- Only color purple if target is another tank (not self) and is a player
+				if targetName and targetName ~= E.myname and UnitIsPlayer(frame.unit.."target") then
+					if E.db.general.tankAssignments and E.db.general.tankAssignments[targetName] then
+						-- The mob is targeting another assigned tank
+						otherTankHasAggro = true
+					end
 				end
 			end
 		end
-
-		if (not status) or (status and not NP.db.threat.useThreatColor) then
+		
+		-- Use threat colors when in combat and setting is enabled
+		if status and NP.db.threat.useThreatColor and inCombat then
+			if otherTankHasAggro then
+				-- Another tank has aggro - use purple/blue color to indicate off-tank threat
+				r, g, b = 0.5, 0.2, 1 -- Purple/Blue for "other tank has it"
+				scale = 1
+			elseif status == 3 then -- Tanking, highest threat
+				if isTank then
+					r, g, b = db.threat.goodColor.r, db.threat.goodColor.g, db.threat.goodColor.b -- Green for tanks
+					scale = NP.db.threat.goodScale
+				else
+					r, g, b = db.threat.badColor.r, db.threat.badColor.g, db.threat.badColor.b -- Red for DPS
+					scale = NP.db.threat.badScale
+				end
+			elseif status == 2 then -- High threat, not tanking
+				if isTank then
+					r, g, b = db.threat.badTransition.r, db.threat.badTransition.g, db.threat.badTransition.b -- Yellow/Orange for tanks losing threat
+				else
+					r, g, b = db.threat.goodTransition.r, db.threat.goodTransition.g, db.threat.goodTransition.b -- Yellow for DPS
+				end
+				scale = 1
+			elseif status == 1 then -- Low threat
+				if isTank then
+					r, g, b = db.threat.goodTransition.r, db.threat.goodTransition.g, db.threat.goodTransition.b -- Yellow for tanks building threat
+				else
+					r, g, b = db.threat.badTransition.r, db.threat.badTransition.g, db.threat.badTransition.b -- Orange for DPS
+				end
+				scale = 1
+			else -- Very low threat or no threat
+				if isTank then
+					r, g, b = db.threat.badColor.r, db.threat.badColor.g, db.threat.badColor.b -- Red for tanks with no threat
+					scale = self.db.threat.badScale
+				else
+					r, g, b = db.threat.goodColor.r, db.threat.goodColor.g, db.threat.goodColor.b -- Green for DPS with no threat
+					scale = self.db.threat.goodScale
+				end
+			end
+		else
+			-- Not in combat or threat coloring disabled - use reaction colors
 			local reactionType = frame.UnitReaction
 			if reactionType == 4 then
 				r, g, b = db.reactions.neutral.r, db.reactions.neutral.g, db.reactions.neutral.b

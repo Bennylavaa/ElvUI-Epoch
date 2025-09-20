@@ -281,10 +281,17 @@ end
 
 function NP:UnitLevel(frame)
 	local level, boss = frame.oldLevel:GetObjectType() == "FontString" and tonumber(frame.oldLevel:GetText()) or false, frame.BossIcon:IsShown()
+	local elite = frame.EliteIcon and frame.EliteIcon:IsShown()
+	
 	if boss or not level then
 		return "??", 0.9, 0, 0
 	else
-		return level, frame.oldLevel:GetTextColor()
+		-- Add + symbol for elite mobs (matching tooltip behavior)
+		local levelText = tostring(level)
+		if elite then
+			levelText = levelText .. "+"
+		end
+		return levelText, frame.oldLevel:GetTextColor()
 	end
 end
 
