@@ -186,4 +186,6 @@ function UF:Update_AssistFrames(frame, db)
 	frame:UpdateAllElements("ForceUpdate")
 end
 
-UF.headerstoload.assist = {"MAINASSIST", "ELVUI_UNITTARGET"}
+if UF.headerstoload then
+	UF.headerstoload.assist = {"MAINASSIST", "ELVUI_UNITTARGET"}
+end

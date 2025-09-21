@@ -160,4 +160,6 @@ function UF:Update_TargetFrame(frame, db)
 	frame:UpdateAllElements("ForceUpdate")
 end
 
-tinsert(UF.unitstoload, "target")
+if UF.unitstoload then
+	tinsert(UF.unitstoload, "target")
+end

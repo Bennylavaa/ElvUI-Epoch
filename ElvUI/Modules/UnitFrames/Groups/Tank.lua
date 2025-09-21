@@ -186,4 +186,6 @@ function UF:Update_TankFrames(frame, db)
 	frame:UpdateAllElements("ForceUpdate")
 end
 
-UF.headerstoload.tank = {"MAINTANK", "ELVUI_UNITTARGET"}
+if UF.headerstoload then
+	UF.headerstoload.tank = {"MAINTANK", "ELVUI_UNITTARGET"}
+end

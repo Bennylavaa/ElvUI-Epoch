@@ -149,4 +149,6 @@ function UF:Update_BossFrames(frame, db)
 	frame:UpdateAllElements("ForceUpdate")
 end
 
-UF.unitgroupstoload.boss = {MAX_BOSS_FRAMES}
+if UF.unitgroupstoload then
+	UF.unitgroupstoload.boss = {MAX_BOSS_FRAMES}
+end

@@ -149,4 +149,6 @@ function UF:Update_ArenaFrames(frame, db)
 	frame:UpdateAllElements("ForceUpdate")
 end
 
-UF.unitgroupstoload.arena = {5}
+if UF.unitgroupstoload then
+	UF.unitgroupstoload.arena = {5}
+end

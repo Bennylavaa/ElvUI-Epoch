@@ -1344,6 +1344,36 @@ function UF:Initialize()
 	self:LoadUnits()
 	self:RegisterEvent("PLAYER_ENTERING_WORLD")
 
+	-- Add custom tank assignment menu options
+	-- Only add if not already added (prevent duplicates)
+	if not UnitPopupButtons["ELVUI_TANK_MARKER"] then
+		UnitPopupButtons["ELVUI_TANK_MARKER"] = {
+			text = "Tank Role Assignment",
+			dist = 0,
+		}
+		
+		-- Helper function to add menu item if not already present
+		local function AddMenuButton(menu, button)
+			local found = false
+			for _, v in ipairs(UnitPopupMenus[menu]) do
+				if v == button then
+					found = true
+					break
+				end
+			end
+			if not found then
+				tinsert(UnitPopupMenus[menu], #UnitPopupMenus[menu], button)
+			end
+		end
+		
+		-- Add to menus (skip PLAYER to avoid duplicate with SELF)
+		AddMenuButton("SELF", "ELVUI_TANK_MARKER")
+		AddMenuButton("PARTY", "ELVUI_TANK_MARKER")
+		AddMenuButton("RAID", "ELVUI_TANK_MARKER")
+		-- Don't add to PLAYER - it overlaps with SELF and causes duplicates
+		AddMenuButton("RAID_PLAYER", "ELVUI_TANK_MARKER")
+	end
+	
 	for k in pairs(UnitPopupMenus) do
 		for x, y in pairs(UnitPopupMenus[k]) do
 			if y == "SET_FOCUS" or y == "CLEAR_FOCUS" or y == "LOCK_FOCUS_FRAME" or y == "UNLOCK_FOCUS_FRAME" or (E.myclass == "HUNTER" and y == "PET_DISMISS") then
@@ -1401,6 +1431,112 @@ function UF:Initialize()
 
 	self:UpdateRangeCheckSpells()
 	self:RegisterEvent("LEARNED_SPELL_IN_TAB", "UpdateRangeCheckSpells")
+	
+	-- Hook the popup menu functions for tank assignment
+	self:SetupTankAssignmentMenu()
+end
+
+-- Hook the unit popup menu to add tank assignment functionality
+function UF:SetupTankAssignmentMenu()
+	-- Only setup once to prevent duplicate handlers
+	if self.tankMenuSetup then return end
+	self.tankMenuSetup = true
+	
+	-- Store original click handler
+	local orig_UnitPopup_OnClick = UnitPopup_OnClick
+	
+	-- Override the click handler
+	function UnitPopup_OnClick(self)
+		local button = self.value
+		local dropdownFrame = UIDROPDOWNMENU_INIT_MENU
+		local unit = dropdownFrame.unit
+		local name = dropdownFrame.name
+		
+		if button == "ELVUI_TANK_MARKER" then
+			if unit then
+				local isTank = E:GetAssignedTankRole(unit)
+				E:SetTankRole(unit, not isTank)
+				
+				-- Update UI with local notification only
+				local unitName = UnitName(unit)
+				CloseDropDownMenus()
+				E:Print(format("%s %s", unitName, not isTank and "assigned as Tank" or "removed from Tank role"))
+			end
+			return  -- Don't call original handler for our custom button
+		end
+		
+		-- Call original handler for all other buttons
+		return orig_UnitPopup_OnClick(self)
+	end
+	
+	-- Clean up any duplicate menu entries that might have been added
+	local function CleanupDuplicateMenus()
+		for menuName, menuItems in pairs(UnitPopupMenus) do
+			local seen = {}
+			local cleaned = {}
+			for i, item in ipairs(menuItems) do
+				if item == "ELVUI_TANK_MARKER" then
+					if not seen[item] then
+						seen[item] = true
+						tinsert(cleaned, item)
+					end
+					-- Skip duplicates
+				else
+					tinsert(cleaned, item)
+				end
+			end
+			if #cleaned < #menuItems then
+				UnitPopupMenus[menuName] = cleaned
+			end
+		end
+	end
+	
+	-- Dynamic text for the tank marker menu option
+	local function UnitPopup_ShowGenericDropdown(dropdownMenu, which, unit, name)
+		-- Clean up duplicates each time menu is shown
+		CleanupDuplicateMenus()
+		if UIDROPDOWNMENU_MENU_VALUE == "ELVUI_TANK_MARKER" then return end
+		
+		-- Remove duplicates first (in case they got added)
+		local tankButtonCount = 0
+		local firstTankButton = nil
+		for i=1, UIDROPDOWNMENU_MAXBUTTONS do
+			local button = _G["DropDownList"..UIDROPDOWNMENU_MENU_LEVEL.."Button"..i]
+			if button and button.value == "ELVUI_TANK_MARKER" then
+				tankButtonCount = tankButtonCount + 1
+				if tankButtonCount == 1 then
+					firstTankButton = button
+				else
+					-- Hide any duplicate buttons
+					button:Hide()
+				end
+			end
+		end
+		
+		-- Now update the first (and only visible) tank button
+		if firstTankButton then
+			local button = firstTankButton
+				local isTank = E:GetAssignedTankRole(unit)
+				if isTank then
+					button:SetText("|cffff0000Remove Tank Role|r")
+				else
+					button:SetText("|cff00ff00Assign Tank Role|r")
+				end
+				
+			-- Only show for appropriate units and if player has permission
+			if unit == "target" or unit == "focus" or unit == "mouseover" then
+				button:Hide()
+			elseif unit ~= "player" and not IsPartyLeader() and not IsRaidOfficer() then
+				button:Hide()
+			else
+				button:Show()
+			end
+		end
+	end
+	
+	-- We're overriding UnitPopup_OnClick directly, so no need to hook it
+	-- Still hook the show menu function for dynamic text updates
+	hooksecurefunc("UnitPopup_ShowMenu", UnitPopup_ShowGenericDropdown)
 end
 
 local function InitializeCallback()
