@@ -93,11 +93,15 @@ function B:Tooltip_Show()
 
 	if self.ttText2 then
 		if self.ttText2desc then
-			GameTooltip:AddLine(" ")
+			GameTooltip:AddLine(' ')
 			GameTooltip:AddDoubleLine(self.ttText2, self.ttText2desc, 1, 1, 1)
 		else
 			GameTooltip:AddLine(self.ttText2)
 		end
+	end
+	
+	if self.ttValue and self.ttValue() > 0 then
+		GameTooltip:AddLine(E:FormatMoney(self.ttValue(), B.db.moneyFormat, not B.db.moneyCoins), 1, 1, 1)
 	end
 
 	GameTooltip:Show()
@@ -1069,6 +1073,33 @@ function B:GetGraysInfo()
 	return #itemList, value
 end
 
+function B:GetGraysInfo2()
+	local value = 0
+
+	for bag = 0, 4 do
+		for slot = 1, GetContainerNumSlots(bag) do
+			local itemID = GetContainerItemID(bag, slot)
+
+			if itemID then
+				local _, link, rarity, _, _, iType, _, _, _, _, itemPrice = GetItemInfo(itemID)
+
+				if (rarity and rarity == 0) and (iType and iType ~= "Quest") and (itemPrice and itemPrice > 0) then
+					local stackCount = select(2, GetContainerItemInfo(bag, slot)) or 1
+					itemPrice = itemPrice * stackCount
+
+					value = value + itemPrice
+				end
+			end
+		end
+	end
+
+	return value
+end
+
+function B:GetGraysValue()
+	return B:GetGraysInfo2()
+end
+
 function B:VendorGrays(delete)
 	if self.SellFrame:IsShown() then return end
 
@@ -1376,6 +1407,7 @@ function B:ContructContainerFrame(name, isBank)
 		f.vendorGraysButton:GetPushedTexture():SetInside()
 		f.vendorGraysButton:StyleButton(nil, true)
 		f.vendorGraysButton.ttText = L["Vendor / Delete Grays"]
+		f.vendorGraysButton.ttValue = B.GetGraysValue
 		f.vendorGraysButton:SetScript("OnEnter", B.Tooltip_Show)
 		f.vendorGraysButton:SetScript("OnLeave", GameTooltip_Hide)
 		f.vendorGraysButton:SetScript("OnClick", B.VendorGrayCheck)
