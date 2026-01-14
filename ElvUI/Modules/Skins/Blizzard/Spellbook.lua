@@ -44,11 +44,15 @@ S:AddCallback("Skin_Spellbook", function()
 
 	for i = 1, 3 do
 		local tab = _G["SpellBookFrameTabButton"..i]
-		tab:Size(122, 32)
-		tab:GetNormalTexture():SetTexture(nil)
-		tab:GetDisabledTexture():SetTexture(nil)
-		tab:GetRegions():SetPoint("CENTER", 0, 2)
-		S:HandleTab(tab)
+		if tab then
+			tab:Size(122, 32)
+			local normalTex = tab:GetNormalTexture()
+			local disabledTex = tab:GetDisabledTexture()
+			if normalTex then normalTex:SetTexture(nil) end
+			if disabledTex then disabledTex:SetTexture(nil) end
+			tab:GetRegions():SetPoint("CENTER", 0, 2)
+			S:HandleTab(tab)
+		end
 	end
 
 	SpellBookFrameTabButton1:Point("CENTER", SpellBookFrame, "BOTTOMLEFT", 72, 62)
@@ -91,8 +95,12 @@ S:AddCallback("Skin_Spellbook", function()
 		tab:StyleButton(nil, true)
 		tab:SetTemplate("Default", true)
 
-		tab:GetNormalTexture():SetInside()
-		tab:GetNormalTexture():SetTexCoord(unpack(E.TexCoords))
+		-- Check if normal texture exists before trying to modify it
+		local normalTexture = tab:GetNormalTexture()
+		if normalTexture then
+			normalTexture:SetInside()
+			normalTexture:SetTexCoord(unpack(E.TexCoords))
+		end
 	end
 
 	SpellBookSkillLineTab1:Point("TOPLEFT", SpellBookFrame, "TOPRIGHT", -33, -65)

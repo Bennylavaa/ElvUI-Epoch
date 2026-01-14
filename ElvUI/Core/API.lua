@@ -118,6 +118,11 @@ function E:GetAssignedTankRole(unit)
 		self.db.general.tankAssignments = {}
 	end
 	
+	-- Validate unit exists before calling UnitName
+	if not unit or unit == "" then
+		return false
+	end
+	
 	local name = UnitName(unit)
 	if name then
 		return self.db.general.tankAssignments[name]
@@ -133,6 +138,11 @@ function E:SetTankRole(unit, isTank)
 	
 	if not self.db.general.tankAssignments then
 		self.db.general.tankAssignments = {}
+	end
+	
+	-- Validate unit exists before calling UnitName
+	if not unit or unit == "" then
+		return
 	end
 	
 	local name = UnitName(unit)
