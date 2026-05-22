@@ -231,10 +231,11 @@ end
 function UF:PostUpdateHealthColor(unit, r, g, b)
 	local parent = self:GetParent()
 	local colors = E.db.unitframe.colors
+	unit = unit or self.unit or parent.unit
 
 	local newr, newg, newb -- fallback for bg if custom settings arent used
 	if not b then r, g, b = colors.health.r, colors.health.g, colors.health.b end
-	if (((colors.healthclass and colors.colorhealthbyvalue) or (colors.colorhealthbyvalue and parent.isForced)) and not (UnitIsTapped(unit) and not UnitIsTappedByPlayer(unit))) then
+	if (((colors.healthclass and colors.colorhealthbyvalue) or (colors.colorhealthbyvalue and parent.isForced)) and not (unit and UnitIsTapped(unit) and not UnitIsTappedByPlayer(unit))) then
 		local cur, max = self.cur or 1, self.max or 100
 		if parent.isForced then
 			cur = parent.forcedHealth or cur
@@ -248,14 +249,14 @@ function UF:PostUpdateHealthColor(unit, r, g, b)
 	if self.bg then
 		self.bg.multiplier = (colors.healthMultiplier > 0 and colors.healthMultiplier) or 0.35
 
-		if colors.useDeadBackdrop and UnitIsDeadOrGhost(unit) then
+		if colors.useDeadBackdrop and unit and UnitIsDeadOrGhost(unit) then
 			self.bg:SetVertexColor(colors.health_backdrop_dead.r, colors.health_backdrop_dead.g, colors.health_backdrop_dead.b)
 		elseif colors.customhealthbackdrop then
 			self.bg:SetVertexColor(colors.health_backdrop.r, colors.health_backdrop.g, colors.health_backdrop.b)
 		elseif colors.classbackdrop then
-			local reaction, color = (UnitReaction(unit, "player"))
+			local reaction, color = (unit and UnitReaction(unit, "player"))
 
-			if UnitIsPlayer(unit) then
+			if unit and UnitIsPlayer(unit) then
 				local _, Class = UnitClass(unit)
 				color = parent.colors.class[Class]
 			elseif reaction then
