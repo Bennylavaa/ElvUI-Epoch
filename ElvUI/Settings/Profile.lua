@@ -37,6 +37,22 @@ P.general = {
 		locationFontSize = 12,
 		locationFontOutline = "OUTLINE",
 		locationFont = "PT Sans Narrow",
+		clock = {
+			enable = false,
+			point = "BOTTOMLEFT",
+			xOffset = 0,
+			yOffset = 0,
+			font = "PT Sans Narrow",
+			fontSize = 12,
+			fontOutline = "OUTLINE",
+			fontColor = {r = 1, g = 1, b = 1, a = 1},
+			useCustomBackdrop = true,
+			showBackground = true,
+			backgroundColor = {r = 0.05, g = 0.05, b = 0.05, a = 0.85},
+			showBorder = true,
+			borderColor = {r = 0, g = 0, b = 0, a = 1},
+			borderSize = 1
+		},
 		resetZoom = {
 			enable = false,
 			time = 3

@@ -217,8 +217,153 @@ E.Options.args.maps = {
 						}
 					}
 				},
-				zoomResetGroup = {
+clockGroup = {
 					order = 4,
+					type = "group",
+					name = "Clock",
+					get = function(info) return E.db.general.minimap.clock[info[#info]] end,
+					set = function(info, value) E.db.general.minimap.clock[info[#info]] = value MM:UpdateClock() end,
+					childGroups = "tab",
+					args = {
+						header = {
+							order = 1,
+							type = "header",
+							name = "Blizzard Minimap Clock"
+						},
+						enable = {
+							order = 2,
+							type = "toggle",
+							name = "Show Blizzard Clock",
+							desc = "Restore the Blizzard time display and enable the styling options below.",
+							get = function() return E.db.general.minimap.clock.enable end,
+							set = function(info, value) E.db.general.minimap.clock.enable = value MM:UpdateClock() end,
+							disabled = function() return not E.private.general.minimap.enable end
+						},
+						point = {
+							order = 3,
+							type = "select",
+							name = "Anchor Point",
+							values = {
+								["TOPLEFT"] = L["Top Left"], ["TOP"] = L["Top"], ["TOPRIGHT"] = L["Top Right"],
+								["LEFT"] = L["Left"], ["CENTER"] = "Center", ["RIGHT"] = L["Right"],
+								["BOTTOMLEFT"] = L["Bottom Left"], ["BOTTOM"] = L["Bottom"], ["BOTTOMRIGHT"] = L["Bottom Right"]
+							},
+							disabled = function() return not E.private.general.minimap.enable or not E.db.general.minimap.clock.enable end
+						},
+						xOffset = {
+							order = 4,
+							type = "range",
+							name = L["X-Offset"],
+							min = -500, max = 500, step = 1,
+							disabled = function() return not E.private.general.minimap.enable or not E.db.general.minimap.clock.enable end
+						},
+						yOffset = {
+							order = 5,
+							type = "range",
+							name = L["Y-Offset"],
+							min = -500, max = 500, step = 1,
+							disabled = function() return not E.private.general.minimap.enable or not E.db.general.minimap.clock.enable end
+						},
+						font = {
+							order = 6,
+							type = "select",
+							dialogControl = "LSM30_Font",
+							name = L["Font"],
+							values = AceGUIWidgetLSMlists.font,
+							disabled = function() return not E.private.general.minimap.enable or not E.db.general.minimap.clock.enable end
+						},
+						fontSize = {
+							order = 7,
+							type = "range",
+							name = L["FONT_SIZE"],
+							min = 6, max = 36, step = 1,
+							disabled = function() return not E.private.general.minimap.enable or not E.db.general.minimap.clock.enable end
+						},
+						fontOutline = {
+							order = 8,
+							type = "select",
+							name = L["Font Outline"],
+							values = C.Values.FontFlags,
+							disabled = function() return not E.private.general.minimap.enable or not E.db.general.minimap.clock.enable end
+						},
+						fontColor = {
+							order = 9,
+							type = "color",
+							name = "Clock Text Color / Opacity",
+							hasAlpha = true,
+							get = function()
+								local c = E.db.general.minimap.clock.fontColor
+								return c.r, c.g, c.b, c.a
+							end,
+							set = function(info, r, g, b, a)
+								local c = E.db.general.minimap.clock.fontColor
+								c.r, c.g, c.b, c.a = r, g, b, a
+								MM:UpdateClock()
+							end,
+							disabled = function() return not E.private.general.minimap.enable or not E.db.general.minimap.clock.enable end
+						},
+						useCustomBackdrop = {
+							order = 10,
+							type = "toggle",
+							name = "Use Custom Background / Border",
+							desc = "Use an independently styled background and border instead of the original Blizzard clock artwork.",
+							disabled = function() return not E.private.general.minimap.enable or not E.db.general.minimap.clock.enable end
+						},
+						showBackground = {
+							order = 11,
+							type = "toggle",
+							name = "Show Background",
+							disabled = function() return not E.private.general.minimap.enable or not E.db.general.minimap.clock.enable end
+						},
+						backgroundColor = {
+							order = 12,
+							type = "color",
+							name = "Background Color / Opacity",
+							hasAlpha = true,
+							get = function()
+								local c = E.db.general.minimap.clock.backgroundColor
+								return c.r, c.g, c.b, c.a
+							end,
+							set = function(info, r, g, b, a)
+								local c = E.db.general.minimap.clock.backgroundColor
+								c.r, c.g, c.b, c.a = r, g, b, a
+								MM:UpdateClock()
+							end,
+							disabled = function() return not E.private.general.minimap.enable or not E.db.general.minimap.clock.enable end
+						},
+						showBorder = {
+							order = 13,
+							type = "toggle",
+							name = "Show Border",
+							disabled = function() return not E.private.general.minimap.enable or not E.db.general.minimap.clock.enable or not E.db.general.minimap.clock.useCustomBackdrop end
+						},
+						borderColor = {
+							order = 14,
+							type = "color",
+							name = "Border Color / Opacity",
+							hasAlpha = true,
+							get = function()
+								local c = E.db.general.minimap.clock.borderColor
+								return c.r, c.g, c.b, c.a
+							end,
+							set = function(info, r, g, b, a)
+								local c = E.db.general.minimap.clock.borderColor
+								c.r, c.g, c.b, c.a = r, g, b, a
+								MM:UpdateClock()
+							end,
+							disabled = function() return not E.private.general.minimap.enable or not E.db.general.minimap.clock.enable or not E.db.general.minimap.clock.useCustomBackdrop end
+						},
+						borderSize = {
+							order = 15,
+							type = "range",
+							name = "Border Thickness",
+							min = 1, max = 8, step = 1,
+							disabled = function() return not E.private.general.minimap.enable or not E.db.general.minimap.clock.enable or not E.db.general.minimap.clock.useCustomBackdrop or not E.db.general.minimap.clock.showBorder end
+						}
+					}
+				},
+				zoomResetGroup = {
+					order = 5,
 					type = "group",
 					name = L["Reset Zoom"],
 					args = {
@@ -247,7 +392,7 @@ E.Options.args.maps = {
 					}
 				},
 				icons = {
-					order = 5,
+					order = 6,
 					type = "group",
 					name = L["Buttons"],
 					args = {

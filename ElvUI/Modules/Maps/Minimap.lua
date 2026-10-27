@@ -139,10 +139,146 @@ function M:GetLocTextColor()
 	end
 end
 
+local function FindClockBackground(button)
+	if not button or not button.GetRegions then return nil end
+	local regions = { button:GetRegions() }
+	for _, region in ipairs(regions) do
+		if region and region.GetObjectType and region:GetObjectType() == "Texture" then
+			local texture = region:GetTexture()
+			if type(texture) == "string" and texture:find("ClockBackground", 1, true) then
+				return region
+			end
+		end
+	end
+end
+
+function M:UpdateClock()
+	if not E.db or not E.db.general or not E.db.general.minimap then return end
+	local settings = E.db.general.minimap.clock
+	local button = _G.TimeManagerClockButton
+
+	-- Prevent Blizzard or another addon from showing the raw clock while ElvUI's toggle is off.
+	-- HookScript preserves any existing OnShow handler from Blizzard/ElvUI.
+	if button and not self.clockVisibilityHooked then
+		self.clockVisibilityHooked = true
+		button:HookScript("OnShow", function(frame)
+			local privateMinimap = E.private
+				and E.private.general
+				and E.private.general.minimap
+
+			local profileMinimap = E.db
+				and E.db.general
+				and E.db.general.minimap
+
+			local currentClock = profileMinimap and profileMinimap.clock
+
+			if privateMinimap
+				and privateMinimap.enable
+				and (not currentClock or not currentClock.enable)
+			then
+				frame:Hide()
+			end
+		end)
+	end
+
+	if not settings then
+		if button and E.private and E.private.general and E.private.general.minimap and E.private.general.minimap.enable then
+			button:Hide()
+		end
+		return
+	end
+	-- If ElvUI's minimap module is disabled, leave the Blizzard clock alone.
+	if not E.private.general.minimap.enable then
+		if button then button:Show() end
+		if self.clockBackdrop then self.clockBackdrop:Hide() end
+		if self.clockTexture then
+			self.clockTexture:SetVertexColor(1, 1, 1)
+			self.clockTexture:SetAlpha(1)
+			self.clockTexture:Show()
+		end
+		return
+	end
+
+	if not settings.enable then
+		if button then button:Hide() end
+		if self.clockBackdrop then self.clockBackdrop:Hide() end
+		return
+	end
+
+	if InCombatLockdown() then
+		self:RegisterEvent("PLAYER_REGEN_ENABLED")
+		return
+	end
+
+	if not IsAddOnLoaded("Blizzard_TimeManager") then
+		LoadAddOn("Blizzard_TimeManager")
+	end
+	button = _G.TimeManagerClockButton
+	if not button then return end
+
+	button:Show()
+	local point = settings.point or "BOTTOMLEFT"
+	button:ClearAllPoints()
+	button:SetPoint(point, Minimap, point, settings.xOffset or 0, settings.yOffset or 0)
+
+	local ticker = _G.TimeManagerClockTicker
+	if ticker then
+		local font = E.Libs.LSM:Fetch("font", settings.font or E.db.general.font)
+		if font then
+			ticker:SetFont(font, settings.fontSize or 12, settings.fontOutline or "OUTLINE")
+		end
+		local color = settings.fontColor or {r = 1, g = 1, b = 1, a = 1}
+		ticker:SetTextColor(color.r or 1, color.g or 1, color.b or 1)
+		ticker:SetAlpha(color.a == nil and 1 or color.a)
+	end
+
+	self.clockTexture = self.clockTexture or FindClockBackground(button)
+	local bg = settings.backgroundColor or {r = 0.05, g = 0.05, b = 0.05, a = 0.85}
+	local border = settings.borderColor or {r = 0, g = 0, b = 0, a = 1}
+
+	if settings.useCustomBackdrop then
+		-- Use an independent backdrop so fill and border can be styled separately.
+		if self.clockTexture then self.clockTexture:Hide() end
+		if not self.clockBackdrop then
+			self.clockBackdrop = CreateFrame("Frame", "ElvUIMinimapClockBackdrop", button:GetParent() or E.UIParent)
+		end
+		local backdrop = self.clockBackdrop
+		backdrop:SetParent(button:GetParent() or E.UIParent)
+		backdrop:SetFrameStrata(button:GetFrameStrata())
+		backdrop:SetFrameLevel(math.max(0, button:GetFrameLevel() - 1))
+		backdrop:ClearAllPoints()
+		backdrop:SetPoint("TOPLEFT", button, "TOPLEFT", -2, 2)
+		backdrop:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 2, -2)
+		backdrop:SetBackdrop({
+			bgFile = "Interface\\Buttons\\WHITE8X8",
+			edgeFile = "Interface\\Buttons\\WHITE8X8",
+			tile = false,
+			edgeSize = settings.borderSize or 1,
+			insets = {left = 0, right = 0, top = 0, bottom = 0}
+		})
+		backdrop:SetBackdropColor(bg.r or 0.05, bg.g or 0.05, bg.b or 0.05,
+			settings.showBackground and (bg.a == nil and 0.85 or bg.a) or 0)
+		backdrop:SetBackdropBorderColor(border.r or 0, border.g or 0, border.b or 0,
+			settings.showBorder and (border.a == nil and 1 or border.a) or 0)
+		if settings.showBackground or settings.showBorder then
+			backdrop:Show()
+		else
+			backdrop:Hide()
+		end
+	else
+		if self.clockBackdrop then self.clockBackdrop:Hide() end
+		if self.clockTexture then
+			self.clockTexture:SetVertexColor(bg.r or 1, bg.g or 1, bg.b or 1)
+			self.clockTexture:SetAlpha(bg.a == nil and 1 or bg.a)
+			if settings.showBackground then self.clockTexture:Show() else self.clockTexture:Hide() end
+		end
+	end
+end
+
 function M:ADDON_LOADED(event, addon)
 	if addon == "Blizzard_TimeManager" then
 		self:UnregisterEvent(event)
-		TimeManagerClockButton:Kill()
+		self:UpdateClock()
 	end
 end
 
@@ -425,6 +561,7 @@ function M:UpdateSettings()
 	if ElvUI_ReminderBuffs then
 		Reminder:UpdateSettings()
 	end
+	self:UpdateClock()
 end
 
 local function MinimapPostDrag()
@@ -537,11 +674,10 @@ function M:Initialize()
 
 	MiniMapInstanceDifficulty:SetParent(Minimap)
 
-	if TimeManagerClockButton then
-		TimeManagerClockButton:Kill()
-	else
+	if not TimeManagerClockButton then
 		self:RegisterEvent("ADDON_LOADED")
 	end
+	self:UpdateClock()
 
 	E:CreateMover(MMHolder, "MinimapMover", L["Minimap"], nil, nil, MinimapPostDrag, nil, nil, "maps,minimap")
 
